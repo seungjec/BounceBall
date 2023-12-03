@@ -1,5 +1,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_mixer.h>
+
 #include <math.h>
 #include <stdio.h>
 
@@ -26,9 +28,86 @@ struct Entity
 };
 
 void Bounce(Entity& Particle);
+static int audio_open = 0;
+static Mix_Chunk* g_wave = NULL;
+
+static void CleanUp(int exitcode)
+{
+    if (g_wave) {
+        Mix_FreeChunk(g_wave);
+        g_wave = NULL;
+    }
+    if (audio_open) {
+        Mix_CloseAudio();
+        audio_open = 0;
+    }
+
+}
+
+static int still_playing(void)
+{
+#ifdef TEST_MIX_CHANNELFINISHED
+    return(!channel_is_done);
+#else
+    return(Mix_Playing(0));
+#endif
+}
 
 int main(int argc, char* argv[])
 {
+    // Audio
+    SDL_AudioSpec spec;
+    int loops = 0;
+
+    /* Initialize variables */
+    spec.freq = MIX_DEFAULT_FREQUENCY;
+    spec.format = MIX_DEFAULT_FORMAT;
+    spec.channels = MIX_DEFAULT_CHANNELS;
+    
+    /* Initialize the SDL library */
+    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+        SDL_Log("Couldn't initialize SDL: %s\n", SDL_GetError());
+        return(255);
+    }
+
+    /* Open the audio device */
+    if (Mix_OpenAudio(0, spec.format, 2, 2048) < 0) {
+        SDL_Log("Couldn't open audio: %s\n", SDL_GetError());
+        CleanUp(2);
+    }
+    else {
+        int ch = (int)spec.channels;
+        Mix_QuerySpec(&spec.freq, &spec.format, &ch);
+        spec.channels = ch;
+        SDL_Log("Opened audio at %d Hz %d bit%s %s", spec.freq,
+            (spec.format & 0xFF),
+            (SDL_AUDIO_ISFLOAT(spec.format) ? " (float)" : ""),
+            (spec.channels > 2) ? "surround" :
+            (spec.channels > 1) ? "stereo" : "mono");
+        if (loops) {
+            SDL_Log(" (looping)\n");
+        }
+        else {
+            putchar('\n');
+        }
+    }
+    audio_open = 1;
+
+    const char* file_sound = "sounds/hit_enemy.wav";
+    g_wave = Mix_LoadWAV(file_sound);
+    if (g_wave == NULL)
+    {
+        SDL_Log("Couldn't load %s: %s\n", file_sound, SDL_GetError());
+    }
+
+    Mix_PlayChannel(0, g_wave, loops);
+    while (still_playing())
+    {
+
+    }
+    CleanUp(0);
+
+    // End of Audio
 
     const int FPS = 50;
     const int frameDelay = 1000 / FPS;
@@ -174,7 +253,7 @@ int main(int argc, char* argv[])
         if (frameTime > 0)
         {
             // Current FPS
-            printf("FPS : %.0f\n", 1000.f/((Uint32)SDL_GetTicks64() - frameStart));
+            // printf("FPS : %.0f\n", 1000.f/((Uint32)SDL_GetTicks64() - frameStart));
         }
     }
 
