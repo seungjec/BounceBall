@@ -45,6 +45,7 @@ int main(int argc, char* argv[])
     SDL_ClearError();
 
     bool isRunning = true;
+    Uint32 nPause = 0;
     SDL_Event event;
 
     // Texture
@@ -99,54 +100,70 @@ int main(int argc, char* argv[])
             case SDLK_ESCAPE:
                 isRunning = false;
                 break;
+            case SDLK_SPACE:
+                nPause += 1;
+                break;
             }
             break;
         }
 
         // Update
 
-        // Move Particle
-        for (int i = 0; i < MAX_PARTICLES; i++)
+        if (nPause % 2)
         {
-            Particle[i].x += Particle[i].vx;
-            Particle[i].y += Particle[i].vy;
-
-            ParticleRect[i].x = (double)Particle[i].x;
-            ParticleRect[i].y = (double)Particle[i].y;
+            ;
         }
-
-        // Check collision between Particle and Wall
-        for (int i = 0; i < MAX_PARTICLES; i++)
+        else
         {
-            Bounce(Particle[i]);
+            // Move Particle
+            for (int i = 0; i < MAX_PARTICLES; i++)
+            {
+                Particle[i].x += Particle[i].vx;
+                Particle[i].y += Particle[i].vy;
+
+                ParticleRect[i].x = (double)Particle[i].x;
+                ParticleRect[i].y = (double)Particle[i].y;
+            }
+
+            // Check collision between Particle and Wall
+            for (int i = 0; i < MAX_PARTICLES; i++)
+            {
+                Bounce(Particle[i]);
+            }
         }
 
         // Render
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, backgroundTexture, NULL, &backgroundRect);
-        for (int i = 0; i < MAX_PARTICLES; i++)
+        if (nPause % 2)
         {
-            if (Particle[i].bBounce)
-            {
-                SDL_SetRenderDrawColor(renderer, 255, 253, 85, 255);
-                SDL_RenderFillRect(renderer, &ParticleRect[i]);
-
-                SDL_SetRenderDrawColor(renderer, 255, 253, 85, 255);
-                SDL_RenderDrawRect(renderer, &ParticleRect[i]);
-
-                Particle[i].bBounce = false;
-            }
-            else
-            {
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                SDL_RenderFillRect(renderer, &ParticleRect[i]);
-
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                SDL_RenderDrawRect(renderer, &ParticleRect[i]);
-            }
+            ;
         }
+        else
+        {
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, backgroundTexture, NULL, &backgroundRect);
+            for (int i = 0; i < MAX_PARTICLES; i++)
+            {
+                if (Particle[i].bBounce)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 253, 85, 255);
+                    SDL_RenderFillRect(renderer, &ParticleRect[i]);
 
-        SDL_RenderPresent(renderer);
+                    SDL_SetRenderDrawColor(renderer, 255, 253, 85, 255);
+                    SDL_RenderDrawRect(renderer, &ParticleRect[i]);
+
+                    Particle[i].bBounce = false;
+                }
+                else
+                {
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    SDL_RenderFillRect(renderer, &ParticleRect[i]);
+
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    SDL_RenderDrawRect(renderer, &ParticleRect[i]);
+                }
+            }
+            SDL_RenderPresent(renderer);
+        }
 
         // Control iteration time for Specific FPS
         frameTime = (Uint32)SDL_GetTicks64() - frameStart;
@@ -156,7 +173,8 @@ int main(int argc, char* argv[])
         }
         if (frameTime > 0)
         {
-            //printf("FPS : %d\n", (int)(1/(((Uint32)SDL_GetTicks64() - frameStart) / 1000.f)));
+            // Current FPS
+            printf("FPS : %.0f\n", 1000.f/((Uint32)SDL_GetTicks64() - frameStart));
         }
     }
 
@@ -176,7 +194,6 @@ void Bounce(Entity& Particle)
         double delta = 0 - Particle.x;
         Particle.x += 2 * delta;
         Particle.bBounce = true;
-
     }
     else if (Particle.x + Particle.w >= WINDOW_W)
     {
